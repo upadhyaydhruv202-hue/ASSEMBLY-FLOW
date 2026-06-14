@@ -1,0 +1,376 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ComponentType {
+  DOOR_LEAF
+  DOOR_FRAME
+}
+
+enum LockType {
+  SASH_LOCK
+  MORTICE_LOCK
+  DEAD_LOCK
+  OTHER
+}
+
+enum LeafType {
+  SINGLE_LEAF
+  DOUBLE_LEAF
+}
+
+enum AssemblyStatus {
+  PENDING
+  COMPLETED
+}
+
+enum FipsStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+}
+
+enum QcStatus {
+  PENDING
+  CHECKED
+  REJECTED
+}
+
+enum DeliveryType {
+  DELIVERY
+  CUSTOMER_COLLECTION
+}
+
+enum SiteDoorStatus {
+  AT_SITE
+  INSTALLED
+  RETURNED
+}
+
+enum MovementEventType {
+  READY_FOR_ASSEMBLY
+  ASSEMBLY_COMPLETED
+  BARCODE_GENERATED
+  FIPS_SUBMITTED
+  FIPS_APPROVED
+  QC_APPROVED
+  QC_REJECTED
+  MOVED_TO_BH_STORAGE
+  MOVED_TO_CAMDEN
+  MOVED_TO_SITE
+  MOVED_TO_CONTAINER
+  MOVED_TO_OTHER_STORAGE
+  DELIVERED
+  COLLECTED
+  RETURNED_TO_BH
+  RETURNED_FROM_SITE
+  STATUS_CHANGED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  name         String
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  activityLogs        ActivityLog[]
+  uploadedDocuments   UploadedDocument[]
+
+  @@map("users")
+}
+
+model ReadyForAssembly {
+  id            String        @id @default(uuid())
+  autoNumber    Int           @default(autoincrement()) @map("auto_number")
+  jobNumber     String        @map("job_number")
+  serialNumber  String        @map("serial_number")
+  sl            String?
+  sl1           String?
+  cellLight     String?       @map("cell_light")
+  componentType ComponentType @map("component_type")
+  readyDate     DateTime      @default(now()) @map("ready_date")
+  isAssembled   Boolean       @default(false) @map("is_assembled")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  assemblyComponents AssemblyComponent[]
+
+  @@index([jobNumber])
+  @@index([readyDate])
+  @@index([componentType])
+  @@map("ready_for_assembly")
+}
+
+model Assembly {
+  id              String         @id @default(uuid())
+  jobNumber       String         @map("job_number")
+  serialNumber    String         @map("serial_number")
+  lockType        LockType       @default(SASH_LOCK) @map("lock_type")
+  leafType        LeafType       @default(SINGLE_LEAF) @map("leaf_type")
+  assemblyDate    DateTime?      @map("assembly_date")
+  assemblyStatus  AssemblyStatus @default(PENDING) @map("assembly_status")
+  currentLocationId String?      @map("current_location_id")
+  currentSiteId   String?        @map("current_site_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  currentLocation   StorageLocation?    @relation(fields: [currentLocationId], references: [id])
+  currentSite       Site?               @relation(fields: [currentSiteId], references: [id])
+  components        AssemblyComponent[]
+  barcode           Barcode?
+  fipsForm          FipsForm?
+  qualityCheck      QualityCheck?
+  storageMovements  StorageMovement[]
+  deliveries        Delivery[]
+  siteDoors         SiteDoor[]
+  returns           Return[]
+  movementHistory   MovementHistory[]
+
+  @@unique([jobNumber, serialNumber])
+  @@index([jobNumber])
+  @@index([assemblyStatus])
+  @@index([currentLocationId])
+  @@map("assemblies")
+}
+
+model AssemblyComponent {
+  id                 String @id @default(uuid())
+  assemblyId         String @map("assembly_id")
+  readyForAssemblyId String @map("ready_for_assembly_id")
+
+  assembly         Assembly         @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  readyForAssembly ReadyForAssembly @relation(fields: [readyForAssemblyId], references: [id])
+
+  @@unique([readyForAssemblyId])
+  @@map("assembly_components")
+}
+
+model Barcode {
+  id           String   @id @default(uuid())
+  assemblyId   String   @unique @map("assembly_id")
+  barcodeValue String   @unique @map("barcode_value")
+  generatedAt  DateTime @default(now()) @map("generated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  assembly Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+
+  @@map("barcodes")
+}
+
+model FipsForm {
+  id            String     @id @default(uuid())
+  assemblyId    String     @unique @map("assembly_id")
+  jobNumber     String     @map("job_number")
+  serialNumber  String     @map("serial_number")
+  status        FipsStatus @default(PENDING)
+  submittedDate DateTime?  @map("submitted_date")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  assembly  Assembly           @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  documents UploadedDocument[]
+
+  @@index([status])
+  @@map("fips_forms")
+}
+
+model QualityCheck {
+  id           String    @id @default(uuid())
+  assemblyId   String    @unique @map("assembly_id")
+  jobNumber    String    @map("job_number")
+  serialNumber String    @map("serial_number")
+  status       QcStatus  @default(PENDING)
+  qcDate       DateTime? @map("qc_date")
+  remarks      String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  assembly Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("quality_checks")
+}
+
+model StorageLocation {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  assemblies       Assembly[]
+  movementsFrom    StorageMovement[] @relation("FromLocation")
+  movementsTo      StorageMovement[] @relation("ToLocation")
+
+  @@map("storage_locations")
+}
+
+model StorageMovement {
+  id             String   @id @default(uuid())
+  assemblyId     String   @map("assembly_id")
+  fromLocationId String?  @map("from_location_id")
+  toLocationId   String   @map("to_location_id")
+  movedAt        DateTime @default(now()) @map("moved_at")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  assembly     Assembly         @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  fromLocation StorageLocation? @relation("FromLocation", fields: [fromLocationId], references: [id])
+  toLocation   StorageLocation  @relation("ToLocation", fields: [toLocationId], references: [id])
+
+  @@index([assemblyId])
+  @@index([movedAt])
+  @@map("storage_movements")
+}
+
+model Site {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  address   String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assemblies Assembly[]
+  deliveries Delivery[]
+  siteDoors  SiteDoor[]
+
+  @@map("sites")
+}
+
+model Delivery {
+  id             String       @id @default(uuid())
+  deliveryNumber String       @unique @map("delivery_number")
+  assemblyId     String       @map("assembly_id")
+  jobNumber      String       @map("job_number")
+  serialNumber   String       @map("serial_number")
+  deliveryDate   DateTime     @default(now()) @map("delivery_date")
+  siteId         String       @map("site_id")
+  driver         String?
+  vehicleNumber  String?      @map("vehicle_number")
+  type           DeliveryType @default(DELIVERY)
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  assembly Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  site     Site     @relation(fields: [siteId], references: [id])
+
+  @@index([deliveryDate])
+  @@index([jobNumber])
+  @@map("deliveries")
+}
+
+model SiteDoor {
+  id            String         @id @default(uuid())
+  assemblyId    String         @map("assembly_id")
+  jobNumber     String         @map("job_number")
+  serialNumber  String         @map("serial_number")
+  siteId        String         @map("site_id")
+  deliveredDate DateTime       @default(now()) @map("delivered_date")
+  status        SiteDoorStatus @default(AT_SITE)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  assembly Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  site     Site     @relation(fields: [siteId], references: [id])
+
+  @@index([siteId])
+  @@index([status])
+  @@map("site_doors")
+}
+
+model ReturnReason {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  returns Return[]
+
+  @@map("return_reasons")
+}
+
+model Return {
+  id             String   @id @default(uuid())
+  assemblyId     String   @map("assembly_id")
+  jobNumber      String   @map("job_number")
+  serialNumber   String   @map("serial_number")
+  returnedFrom   String   @map("returned_from")
+  returnDate     DateTime @default(now()) @map("return_date")
+  returnReasonId String   @map("return_reason_id")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  assembly     Assembly     @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  returnReason ReturnReason @relation(fields: [returnReasonId], references: [id])
+
+  @@index([returnDate])
+  @@index([jobNumber])
+  @@map("returns")
+}
+
+model MovementHistory {
+  id           String            @id @default(uuid())
+  assemblyId   String?           @map("assembly_id")
+  jobNumber    String            @map("job_number")
+  serialNumber String            @map("serial_number")
+  eventType    MovementEventType @map("event_type")
+  eventDate    DateTime          @default(now()) @map("event_date")
+  details      String?
+  metadata     Json?
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  assembly Assembly? @relation(fields: [assemblyId], references: [id], onDelete: SetNull)
+
+  @@index([jobNumber, serialNumber])
+  @@index([eventDate])
+  @@index([eventType])
+  @@map("movement_history")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  action    String
+  module    String
+  entityId  String?  @map("entity_id")
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([module])
+  @@map("activity_logs")
+}
+
+model UploadedDocument {
+  id           String   @id @default(uuid())
+  entityType   String   @map("entity_type")
+  entityId     String   @map("entity_id")
+  fipsFormId   String?  @map("fips_form_id")
+  fileName     String   @map("file_name")
+  filePath     String   @map("file_path")
+  mimeType     String   @map("mime_type")
+  fileSize     Int      @map("file_size")
+  uploadedById String?  @map("uploaded_by_id")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  fipsForm   FipsForm? @relation(fields: [fipsFormId], references: [id], onDelete: Cascade)
+  uploadedBy User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@map("uploaded_documents")
+}
