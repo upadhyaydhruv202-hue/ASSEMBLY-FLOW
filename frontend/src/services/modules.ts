@@ -100,7 +100,8 @@ export const deliveryApi = {
     api.get<ApiResponse<Delivery[]>>('/deliveries', { params }),
   create: (data: {
     assemblyIds: string[];
-    siteId: string;
+    siteId?: string;
+    siteName?: string;
     driver?: string;
     vehicleNumber?: string;
     type?: string;

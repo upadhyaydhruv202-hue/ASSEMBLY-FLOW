@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Printer } from 'lucide-react';
-import { deliveryApi, siteApi, storageApi } from '@/services/modules';
+import { deliveryApi, storageApi } from '@/services/modules';
 import { PageHeader, SearchFilters } from '@/components/shared/PageHeader';
 import { DataTable, TableHeader, TableHead, TableBody, TableRow, TableCell, EmptyState, Pagination } from '@/components/shared/DataTable';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { formatDate, DELIVERY_TYPES } from '@/lib/utils';
-import type { Delivery, Assembly, Site } from '@/types';
+import type { Delivery, Assembly } from '@/types';
 
 export default function DeliveryPage() {
   const queryClient = useQueryClient();
@@ -22,17 +22,12 @@ export default function DeliveryPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedDoors, setSelectedDoors] = useState<string[]>([]);
   const [form, setForm] = useState({
-    siteId: '', driver: '', vehicleNumber: '', type: 'DELIVERY', notes: '',
+    siteName: '', driver: '', vehicleNumber: '', type: 'DELIVERY', notes: '',
   });
 
   const { data, isLoading } = useQuery({
     queryKey: ['deliveries', search, page],
     queryFn: () => deliveryApi.list({ search, page: String(page) }).then((r) => r.data),
-  });
-
-  const { data: sites } = useQuery({
-    queryKey: ['sites'],
-    queryFn: () => siteApi.list().then((r) => r.data.data),
   });
 
   const { data: bhDoors } = useQuery({
@@ -55,6 +50,7 @@ export default function DeliveryPage() {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setShowCreate(false);
       setSelectedDoors([]);
+      setForm({ siteName: '', driver: '', vehicleNumber: '', type: 'DELIVERY', notes: '' });
     },
     onError: (e: { response?: { data?: { message?: string } } }) => toast.error(e.response?.data?.message || 'Failed'),
   });
@@ -104,7 +100,7 @@ export default function DeliveryPage() {
             <TableHead>Job Number</TableHead>
             <TableHead>Serial Number</TableHead>
             <TableHead>Delivery Date</TableHead>
-            <TableHead>Site</TableHead>
+            <TableHead>Delivery Location</TableHead>
             <TableHead>Driver</TableHead>
             <TableHead>Vehicle</TableHead>
             <TableHead>Type</TableHead>
@@ -136,19 +132,24 @@ export default function DeliveryPage() {
 
       {pagination && <Pagination page={page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={setPage} />}
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={showCreate} onOpenChange={(open) => {
+        setShowCreate(open);
+        if (!open) {
+          setSelectedDoors([]);
+          setForm({ siteName: '', driver: '', vehicleNumber: '', type: 'DELIVERY', notes: '' });
+        }
+      }}>
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>Create Delivery</DialogTitle></DialogHeader>
           <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Site</Label>
-                <Select value={form.siteId} onValueChange={(v) => setForm({ ...form, siteId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
-                  <SelectContent>
-                    {(sites as Site[])?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Label>Delivery Location</Label>
+                <Input
+                  value={form.siteName}
+                  onChange={(e) => setForm({ ...form, siteName: e.target.value })}
+                  placeholder="e.g. Birmingham Tower, 123 High Street"
+                />
               </div>
               <div>
                 <Label>Type</Label>
@@ -183,7 +184,7 @@ export default function DeliveryPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!form.siteId || selectedDoors.length === 0 || createMutation.isPending}>
+            <Button onClick={() => createMutation.mutate()} disabled={!form.siteName.trim() || selectedDoors.length === 0 || createMutation.isPending}>
               Create Delivery
             </Button>
           </DialogFooter>

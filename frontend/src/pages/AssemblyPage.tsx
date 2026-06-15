@@ -51,7 +51,7 @@ export default function AssemblyPage() {
       queryClient.invalidateQueries({ queryKey: ['ready-for-assembly'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setShowCreate(false);
-      setSelectedComponents([]);
+      resetCreateForm();
     },
     onError: (e: { response?: { data?: { message?: string } } }) => toast.error(e.response?.data?.message || 'Failed'),
   });
@@ -86,6 +86,33 @@ export default function AssemblyPage() {
     } catch {
       toast.error('Barcode not found');
       setScanResult(null);
+    }
+  };
+
+  const resetCreateForm = () => {
+    setSelectedComponents([]);
+    setForm({ jobNumber: '', serialNumber: '', lockType: 'SASH_LOCK', leafType: 'SINGLE_LEAF' });
+  };
+
+  const handleComponentToggle = (item: ReadyForAssembly, checked: boolean) => {
+    if (checked) {
+      if (selectedComponents.length === 0) {
+        setForm((prev) => ({ ...prev, jobNumber: item.jobNumber, serialNumber: item.serialNumber }));
+        setSelectedComponents([item.id]);
+        return;
+      }
+      if (item.jobNumber !== form.jobNumber || item.serialNumber !== form.serialNumber) {
+        toast.error('All components must share the same job number and serial number');
+        return;
+      }
+      setSelectedComponents([...selectedComponents, item.id]);
+      return;
+    }
+
+    const next = selectedComponents.filter((id) => id !== item.id);
+    setSelectedComponents(next);
+    if (next.length === 0) {
+      setForm((prev) => ({ ...prev, jobNumber: '', serialNumber: '' }));
     }
   };
 
@@ -149,13 +176,35 @@ export default function AssemblyPage() {
 
       {pagination && <Pagination page={page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={setPage} />}
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-2xl">
+      <Dialog
+        open={showCreate}
+        onOpenChange={(open) => {
+          setShowCreate(open);
+          if (!open) resetCreateForm();
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>Create Assembly</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>Job Number</Label><Input value={form.jobNumber} onChange={(e) => setForm({ ...form, jobNumber: e.target.value })} /></div>
-              <div><Label>Serial Number</Label><Input value={form.serialNumber} onChange={(e) => setForm({ ...form, serialNumber: e.target.value })} /></div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Job Number</Label>
+                <Input
+                  value={form.jobNumber}
+                  readOnly
+                  placeholder="Auto-filled from selected components"
+                  className="bg-muted"
+                />
+              </div>
+              <div>
+                <Label>Serial Number</Label>
+                <Input
+                  value={form.serialNumber}
+                  readOnly
+                  placeholder="Auto-filled from selected components"
+                  className="bg-muted"
+                />
+              </div>
               <div>
                 <Label>Lock Type</Label>
                 <Select value={form.lockType} onValueChange={(v) => setForm({ ...form, lockType: v })}>
@@ -178,25 +227,37 @@ export default function AssemblyPage() {
             <div>
               <Label>Select Components ({selectedComponents.length} selected)</Label>
               <div className="max-h-40 overflow-y-auto border rounded-md p-2 mt-1 space-y-1">
-                {readyItems.map((item) => (
-                  <label key={item.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted p-1 rounded">
-                    <input
-                      type="checkbox"
-                      checked={selectedComponents.includes(item.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedComponents([...selectedComponents, item.id]);
-                        else setSelectedComponents(selectedComponents.filter((id) => id !== item.id));
-                      }}
-                    />
-                    {item.jobNumber} / {item.serialNumber} - {item.componentType.replace('_', ' ')}
-                  </label>
-                ))}
+                {readyItems.map((item) => {
+                  const isSelected = selectedComponents.includes(item.id);
+                  const isCompatible = selectedComponents.length === 0
+                    || (item.jobNumber === form.jobNumber && item.serialNumber === form.serialNumber);
+
+                  return (
+                    <label
+                      key={item.id}
+                      className={`flex items-center gap-2 text-sm p-1 rounded ${
+                        isCompatible ? 'cursor-pointer hover:bg-muted' : 'cursor-not-allowed opacity-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={!isCompatible && !isSelected}
+                        onChange={(e) => handleComponentToggle(item, e.target.checked)}
+                      />
+                      {item.jobNumber} / {item.serialNumber} - {item.componentType.replace('_', ' ')}
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || selectedComponents.length === 0}>
+            <Button variant="outline" onClick={() => { setShowCreate(false); resetCreateForm(); }}>Cancel</Button>
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={createMutation.isPending || selectedComponents.length === 0 || !form.jobNumber || !form.serialNumber}
+            >
               Complete Assembly
             </Button>
           </DialogFooter>

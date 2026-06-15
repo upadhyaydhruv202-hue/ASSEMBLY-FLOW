@@ -96,10 +96,10 @@ export default function ReturnsPage() {
       {pagination && <Pagination page={page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={setPage} />}
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>Process Return</DialogTitle></DialogHeader>
           <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label>Returned From</Label>
                 <Select value={form.returnedFrom} onValueChange={(v) => setForm({ ...form, returnedFrom: v })}>

@@ -40,9 +40,28 @@ export async function listDeliveries(query) {
   return { items, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
+async function resolveSite(data) {
+  if (data.siteId) {
+    const site = await prisma.site.findUnique({ where: { id: data.siteId } });
+    if (!site) throw new AppError('Site not found', 404);
+    return site;
+  }
+
+  const name = data.siteName.trim();
+  let site = await prisma.site.findFirst({
+    where: { name: { equals: name, mode: 'insensitive' } },
+  });
+
+  if (!site) {
+    site = await prisma.site.create({ data: { name } });
+  }
+
+  return site;
+}
+
 export async function createDeliveries(data, userId) {
-  const site = await prisma.site.findUnique({ where: { id: data.siteId } });
-  if (!site) throw new AppError('Site not found', 404);
+  const site = await resolveSite(data);
+  const siteId = site.id;
 
   const assemblies = await prisma.assembly.findMany({
     where: { id: { in: data.assemblyIds } },
@@ -72,7 +91,7 @@ export async function createDeliveries(data, userId) {
           jobNumber: assembly.jobNumber,
           serialNumber: assembly.serialNumber,
           deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : new Date(),
-          siteId: data.siteId,
+          siteId,
           driver: data.driver,
           vehicleNumber: data.vehicleNumber,
           type: data.type || 'DELIVERY',
@@ -86,7 +105,7 @@ export async function createDeliveries(data, userId) {
           assemblyId: assembly.id,
           jobNumber: assembly.jobNumber,
           serialNumber: assembly.serialNumber,
-          siteId: data.siteId,
+          siteId,
           deliveredDate: created.deliveryDate,
           status: 'AT_SITE',
         },
@@ -95,7 +114,7 @@ export async function createDeliveries(data, userId) {
       if (siteLocation) {
         await tx.assembly.update({
           where: { id: assembly.id },
-          data: { currentLocationId: siteLocation.id, currentSiteId: data.siteId },
+          data: { currentLocationId: siteLocation.id, currentSiteId: siteId },
         });
         await tx.storageMovement.create({
           data: {

@@ -9,6 +9,7 @@
     "start": "node server.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
+    "db:reset": "prisma db push --force-reset && node prisma/seed-reference.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio"

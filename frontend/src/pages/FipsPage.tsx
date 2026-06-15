@@ -119,7 +119,7 @@ export default function FipsPage() {
       </Dialog>
 
       <Dialog open={!!viewDocs} onOpenChange={() => setViewDocs(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>Documents - {viewDocs?.jobNumber}</DialogTitle></DialogHeader>
           <div className="space-y-3 max-h-[70vh] overflow-y-auto">
             {viewDocs?.documents?.length ? viewDocs.documents.map((doc) => {

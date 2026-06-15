@@ -92,12 +92,15 @@ export const bulkStorageMoveSchema = z.object({
 export const deliverySchema = z.object({
   body: z.object({
     assemblyIds: z.array(z.string().uuid()).min(1),
-    siteId: z.string().uuid(),
+    siteId: z.string().uuid().optional(),
+    siteName: z.string().min(1).max(200).optional(),
     deliveryDate: z.string().datetime().optional(),
     driver: z.string().optional(),
     vehicleNumber: z.string().optional(),
     type: z.enum(['DELIVERY', 'CUSTOMER_COLLECTION']).optional(),
     notes: z.string().optional(),
+  }).refine((data) => data.siteId || data.siteName?.trim(), {
+    message: 'Delivery location is required',
   }),
 });
 

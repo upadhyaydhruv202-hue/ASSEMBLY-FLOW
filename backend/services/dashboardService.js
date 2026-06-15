@@ -146,11 +146,11 @@ async function getReturnReasonsAnalysis() {
     _count: { id: true },
   });
 
-  const reasons = await prisma.returnReason.findMany();
-  const reasonMap = Object.fromEntries(reasons.map((r) => [r.id, r.name]));
+  const reasons = await prisma.returnReason.findMany({ orderBy: { name: 'asc' } });
+  const countMap = Object.fromEntries(returns.map((r) => [r.returnReasonId, r._count.id]));
 
-  return returns.map((r) => ({
-    reason: reasonMap[r.returnReasonId] || 'Unknown',
-    count: r._count.id,
+  return reasons.map((reason) => ({
+    reason: reason.name,
+    count: countMap[reason.id] || 0,
   }));
 }

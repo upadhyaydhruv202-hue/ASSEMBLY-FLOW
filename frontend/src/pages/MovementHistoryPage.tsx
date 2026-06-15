@@ -54,11 +54,11 @@ export default function MovementHistoryPage() {
         </TabsList>
 
         <TabsContent value="table" className="mt-4">
-          <div className="flex flex-wrap gap-4 mb-4">
-            <div><Label>Job Number</Label><Input value={jobNumber} onChange={(e) => setJobNumber(e.target.value)} placeholder="44.00044" /></div>
-            <div><Label>Serial Number</Label><Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} placeholder="1" /></div>
-            <div className="flex items-end">
-              <Button onClick={() => { setPage(1); handleTimelineSearch(); }}><Search className="h-4 w-4 mr-1" /> Search</Button>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="w-full sm:w-auto"><Label>Job Number</Label><Input className="w-full" value={jobNumber} onChange={(e) => setJobNumber(e.target.value)} placeholder="44.00044" /></div>
+            <div className="w-full sm:w-auto"><Label>Serial Number</Label><Input className="w-full" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} placeholder="1" /></div>
+            <div className="w-full sm:w-auto sm:flex sm:items-end">
+              <Button className="w-full sm:w-auto" onClick={() => { setPage(1); handleTimelineSearch(); }}><Search className="h-4 w-4 mr-1" /> Search</Button>
             </div>
           </div>
 
@@ -91,11 +91,11 @@ export default function MovementHistoryPage() {
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div><Label>Job Number</Label><Input value={jobNumber} onChange={(e) => setJobNumber(e.target.value)} /></div>
-            <div><Label>Serial Number</Label><Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} /></div>
-            <div className="flex items-end">
-              <Button onClick={handleTimelineSearch}><Search className="h-4 w-4 mr-1" /> View Timeline</Button>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="w-full sm:w-auto"><Label>Job Number</Label><Input className="w-full" value={jobNumber} onChange={(e) => setJobNumber(e.target.value)} /></div>
+            <div className="w-full sm:w-auto"><Label>Serial Number</Label><Input className="w-full" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} /></div>
+            <div className="w-full sm:w-auto sm:flex sm:items-end">
+              <Button className="w-full sm:w-auto" onClick={handleTimelineSearch}><Search className="h-4 w-4 mr-1" /> View Timeline</Button>
             </div>
           </div>
 

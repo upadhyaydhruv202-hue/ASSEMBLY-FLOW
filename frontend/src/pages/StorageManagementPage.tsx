@@ -88,7 +88,7 @@ export default function StorageManagementPage() {
         }
       />
 
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6 mb-6">
         {(summary || []).map((loc: { name: string; code: string; count: number }) => (
           <Card
             key={loc.code}
@@ -145,7 +145,7 @@ export default function StorageManagementPage() {
       </Card>
 
       <Dialog open={showBulkMove} onOpenChange={setShowBulkMove}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader><DialogTitle>Bulk Move - {selected.length} doors selected</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {assignments.map((a, i) => (
